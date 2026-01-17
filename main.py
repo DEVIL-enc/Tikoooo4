@@ -256,18 +256,18 @@ async def process_video(
     tmp_out_path = None
 
     try:
-        suffix = Path(file.filename).suffix or ".mp4"
+                suffix = Path(file.filename or "video.mp4").suffix or ".mp4"
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_in:
-    tmp_in_path = tmp_in.name
+            tmp_in_path = tmp_in.name
 
-with open(tmp_in_path, "wb") as f:
-    while True:
-        chunk = await file.read(1024 * 1024)  # 1MB
-        if not chunk:
-            break
-        f.write(chunk)
-
+        # كتابة الفيديو قطعة قطعة (ما يستهلكش RAM)
+        while True:
+            chunk = await file.read(1024 * 1024)  # 1MB
+            if not chunk:
+                break
+            with open(tmp_in_path, "ab") as f:
+                f.write(chunk)
         tmp_out_path = tmp_in_path.replace(suffix, f"_out{suffix}")
 
         if plan not in FFMPEG_PLANS:
