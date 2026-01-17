@@ -102,7 +102,7 @@ FFMPEG_PLANS = {
     "ffmpeg","-y",
     "-itsscale","2",
     "-i","{input}",
-    "-vf","scale=1080:1920,hue=s=2,fps=30,format=yuv420p",
+    "-vf","scale=1920:1080,hue=s=2,fps=30,format=yuv420p",
     "-c:v","libx264","-crf","21","-preset","veryfast",
     "-x264-params","keyint=60:min-keyint=60:scenecut=0",
     "-c:a","aac","-b:a","192k",
@@ -112,14 +112,15 @@ FFMPEG_PLANS = {
 
     # احترافي 🔥 (أعلى جودة — وقت أطول)
     "ultra": [
-        "ffmpeg", "-i", "{input}",
-        "-vf", "fps=60,hqdn3d=1.2:1.2:6:6,unsharp=5:5:0.7:3:3:0.4,tmix=frames=2:weights='1 1',eq=contrast=1.05:saturation=1.08:brightness=0.01",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "17",
-        "-profile:v", "high", "-level", "4.1", "-pix_fmt", "yuv420p",
-        "-g", "120", "-keyint_min", "60", "-sc_threshold", "0",
-        "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
-        "-movflags", "+faststart",
-        "{output}"
+    "ffmpeg","-y",
+    "-itsscale","2",
+    "-i","{input}",
+    "-vf","scale=1920:1080:flags=lanczos,hqdn3d=1.2:1.2:6:6,unsharp=5:5:0.9:3:3:0.5,eq=contrast=1.18:brightness=0.04:saturation=1.25,fps=60,tmix=frames=4:weights='1 1 1 1',format=yuv420p",
+    "-c:v","libx264","-crf","20","-preset","veryfast",
+    "-x264-params","keyint=120:min-keyint=120:scenecut=0",
+    "-c:a","aac","-b:a","192k",
+    "-movflags","+faststart",
+    "{output}"
     ]
 }
 
