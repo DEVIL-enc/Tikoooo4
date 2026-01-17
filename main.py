@@ -6,7 +6,6 @@ import subprocess
 import tempfile
 import threading
 import requests
-import shutil
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -256,8 +255,13 @@ async def process_video(request: Request, file: UploadFile = File(...), plan: st
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_in:
     tmp_in_path = tmp_in.name
 
+# كتابة الملف "قطع" بدون ما يدخل RAM
 with open(tmp_in_path, "wb") as f:
-    shutil.copyfileobj(file.file, f)
+    while True:
+        chunk = await file.read(1024 * 1024)  # 1MB
+        if not chunk:
+            break
+        f.write(chunk)
 
         tmp_out_path = tmp_in_path.replace(suffix, f"_out{suffix}")
 
