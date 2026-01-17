@@ -103,7 +103,7 @@ FFMPEG_PLANS = {
     "-itsscale","2",
     "-i","{input}",
     "-vf",
-    "scale=1080:1920,"
+    "scale=1920:1080,"
     "fps=30,"
     "tmix=frames=2,"
     "unsharp=5:5:0.85:3:3:0.4,"
@@ -279,7 +279,7 @@ async def process_video(request: Request, file: UploadFile = File(...), plan: st
         cmd = [c.format(input=tmp_in_path, output=tmp_out_path) for c in FFMPEG_PLANS[plan]]
         subprocess.run(cmd, check=True, capture_output=True, text=True, encoding="utf-8")
 
-        return FileResponse(tmp_out_path, filename=f"4tik_{file.filename}")
+        return FileResponse(tmp_out_path, filename=f"RESIST_{file.filename}")
 
     except subprocess.CalledProcessError:
         next_plan = "smooth" if plan == "fast" else ("ultra" if plan == "smooth" else None)
@@ -289,9 +289,13 @@ async def process_video(request: Request, file: UploadFile = File(...), plan: st
         raise HTTPException(status_code=500, detail=f"حدث خطأ غير متوقع: {str(e)}")
 
     finally:
-        # احذف input فقط (output لا تحذفه هنا باش ما يخربش التنزيل)
-        try:
-            if tmp_in_path and os.path.exists(tmp_in_path):
-                os.remove(tmp_in_path)
-        except:
-            pass
+    try:
+        if tmp_in_path and os.path.exists(tmp_in_path):
+            os.remove(tmp_in_path)
+    except:
+        pass
+    try:
+        if tmp_out_path and os.path.exists(tmp_out_path):
+            os.remove(tmp_out_path)
+    except:
+        pass
