@@ -103,11 +103,10 @@ FFMPEG_PLANS = {
     "-itsscale","2",
     "-i","{input}",
     "-vf",
-    "scale=1920:1080,"
-    "hue=s=2,"
+    "scale=1080:1920,"
     "fps=30,"
-    "tmix=frames=3,"
-    "unsharp=5:5:0.6:3:3:0.25,"
+    "tmix=frames=2,"
+    "unsharp=5:5:0.85:3:3:0.4,"
     "format=yuv420p",
     "-c:v","libx264","-crf","21","-preset","veryfast",
     "-x264-params","keyint=60:min-keyint=60:scenecut=0",
