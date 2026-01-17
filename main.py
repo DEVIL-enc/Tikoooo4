@@ -251,11 +251,16 @@ async def process_video(request: Request, file: UploadFile = File(...), plan: st
     tmp_out_path = None
 
     try:
-        suffix = Path(file.filename).suffix
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_in:
-            contents = await file.read()
-            tmp_in.write(contents)
-            tmp_in_path = tmp_in.name
+        suffix = Path(file.filename or "video.mp4").suffix or ".mp4"
+with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_in:
+    tmp_in_path = tmp_in.name
+
+with open(tmp_in_path, "wb") as f:
+    while True:
+        chunk = await file.read(1024 * 1024)  # 1MB
+        if not chunk:
+            break
+        f.write(chunk)
 
         tmp_out_path = tmp_in_path.replace(suffix, f"_out{suffix}")
 
