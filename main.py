@@ -99,15 +99,13 @@ FFMPEG_PLANS = {
 
     # محسّن ✨ (سلاسة + تحسين بسيط للجودة)
     "smooth": [
-        "ffmpeg", "-i", "{input}",
-        "-vf", "fps=60,hqdn3d=1.2:1.2:6:6,unsharp=5:5:0.7:3:3:0.4,tmix=frames=2:weights='1 1',eq=contrast=1.05:saturation=1.08:brightness=0.01",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
-        "-profile:v", "high", "-level", "4.1", "-pix_fmt", "yuv420p",
-        "-g", "120", "-keyint_min", "60", "-sc_threshold", "0",
-        "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
-        "-movflags", "+faststart",
-        "{output}"
-    ],
+  "ffmpeg", "-i", "{input}",
+  "-vf", "fps=60,hqdn3d=1.2:1.2:6:6,unsharp=5:5:0.7:3:3:0.4",
+  "-c:v", "mpeg4", "-q:v", "3",
+  "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
+  "-movflags", "+faststart",
+  "{output}"
+],
 
     # احترافي 🔥 (أعلى جودة — وقت أطول)
     "ultra": [
