@@ -226,7 +226,12 @@ async def me(request: Request):
 # معالجة الفيديو (تمت إضافة plan فقط ✅)
 # ============================
 @app.post("/process", summary="معالجة الفيديو للمستخدمين المشتركين", dependencies=[Depends(verify_content_length)])
-async def process_video(request: Request, file: UploadFile = File(...), plan: str = Form("fast")):
+async def process_video(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    plan: str = Form("fast")
+):
     key = request.headers.get("X-KEY")
     device = request.headers.get("X-DEVICE")
     if not key or not device:
@@ -251,17 +256,18 @@ async def process_video(request: Request, file: UploadFile = File(...), plan: st
     tmp_out_path = None
 
     try:
-        suffix = Path(file.filename).suffix
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_in:
-    tmp_in_path = tmp_in.name
+        suffix = Path(file.filename).suffix or ".mp4"
 
-# كتابة الملف "قطع" بدون ما يدخل RAM
-with open(tmp_in_path, "wb") as f:
-    while True:
-        chunk = await file.read(1024 * 1024)  # 1MB
-        if not chunk:
-            break
-        f.write(chunk)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_in:
+            tmp_in_path = tmp_in.name
+
+        # كتابة الملف قطعة قطعة (بدون RAM)
+        with open(tmp_in_path, "wb") as f:
+            while True:
+                chunk = await file.read(1024 * 1024)  # 1MB
+                if not chunk:
+                    break
+                f.write(chunk)
 
         tmp_out_path = tmp_in_path.replace(suffix, f"_out{suffix}")
 
@@ -269,26 +275,63 @@ with open(tmp_in_path, "wb") as f:
             plan = "fast"
 
         cmd = [c.format(input=tmp_in_path, output=tmp_out_path) for c in FFMPEG_PLANS[plan]]
-        subprocess.run(cmd, check=True, capture_output=True, text=True, encoding='utf-8')
+        subprocess.run(cmd, check=True, capture_output=True, text=True, encoding="utf-8")
 
-        return FileResponse(tmp_out_path, filename=f"4tik_{file.filename}")
-
-    except subprocess.CalledProcessError:
-        next_plan = "smooth" if plan == "fast" else ("ultra" if plan == "smooth" else None)
-        return JSONResponse(status_code=400, content={"status": "failed", "message": "فشلت المعالجة", "next_plan": next_plan})
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"حدث خطأ غير متوقع: {str(e)}")
-
-    finally:
+        # احذف input فورًا لتوفير المساحة
         try:
             if tmp_in_path and os.path.exists(tmp_in_path):
                 os.remove(tmp_in_path)
         except:
             pass
 
+        # احذف output بعد ما يتبعت للمستخدم
+        def _cleanup(p):
+            try:
+                if p and os.path.exists(p):
+                    os.remove(p)
+            except:
+                pass
+
+        background_tasks.add_task(_cleanup, tmp_out_path)
+
+        return FileResponse(
+            tmp_out_path,
+            filename=f"4tik_{file.filename}",
+            background=background_tasks
+        )
+
+    except subprocess.CalledProcessError:
+        # خلي الاختيار يدوي (زي ما تبي)
+        next_plan = "smooth" if plan == "fast" else ("ultra" if plan == "smooth" else None)
+
+        # تنظيف سريع لو فيه ملفات
+        try:
+            if tmp_in_path and os.path.exists(tmp_in_path):
+                os.remove(tmp_in_path)
+        except:
+            pass
         try:
             if tmp_out_path and os.path.exists(tmp_out_path):
                 os.remove(tmp_out_path)
         except:
             pass
+
+        return JSONResponse(
+            status_code=400,
+            content={"status": "failed", "message": "فشلت المعالجة", "next_plan": next_plan}
+        )
+
+    except Exception as e:
+        # تنظيف سريع لو فيه ملفات
+        try:
+            if tmp_in_path and os.path.exists(tmp_in_path):
+                os.remove(tmp_in_path)
+        except:
+            pass
+        try:
+            if tmp_out_path and os.path.exists(tmp_out_path):
+                os.remove(tmp_out_path)
+        except:
+            pass
+
+        raise HTTPException(status_code=500, detail=f"حدث خطأ غير متوقع: {str(e)}")
