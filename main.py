@@ -100,6 +100,7 @@ FFMPEG_PLANS = {
     # محسّن ✨ (سلاسة + تحسين بسيط للجودة)
     "smooth": [
     "ffmpeg","-y",
+    "-itsscale","2",
     "-i","{input}",
     "-vf","scale=1080:1920,hue=s=2,fps=30,format=yuv420p",
     "-c:v","libx264","-crf","21","-preset","veryfast",
