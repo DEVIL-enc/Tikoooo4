@@ -2,58 +2,91 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>4Tik</title>
+<title>RESIST TIK</title>
 <style>
 body{margin:0;background:#081a2b;color:#fff;font-family:system-ui}
 .box{max-width:600px;margin:40px auto;background:#0b2a44;padding:20px;border-radius:20px}
-.plans{display:flex;gap:10px;justify-content:center}
-.plan{padding:12px;border-radius:14px;border:none;background:#123e63;color:#fff;font-weight:bold}
-.active{outline:2px solid #00d4ff}
-#desc{margin-top:10px;font-size:13px;opacity:.85;text-align:center}
-button.start{width:100%;margin-top:15px;padding:14px;border-radius:14px;border:none;background:#00d4ff;color:#001}
+.plans{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.plan{padding:12px 16px;border-radius:14px;border:none;background:#123e63;color:#fff;font-weight:bold;cursor:pointer}
+.plan.active{outline:2px solid #00d4ff}
+#desc{margin-top:10px;font-size:13px;opacity:.85;text-align:center;line-height:1.6}
+button.start{width:100%;margin-top:15px;padding:14px;border-radius:14px;border:none;background:#00d4ff;color:#001;font-weight:900;cursor:pointer}
+#msg{margin-top:10px;text-align:center;font-size:13px}
 </style>
 </head>
 <body>
 <div class="box">
-<h2>معالجة فيديو تيك توك</h2>
+<h2 style="text-align:center;margin-top:0">معالجة فيديو تيك توك</h2>
 
 <div class="plans">
-<button id="f" class="plan" onclick="setP('fast')">سريع ⚡</button>
-<button id="s" class="plan" onclick="setP('smooth')">محسّن ✨</button>
-<button id="u" class="plan" onclick="setP('ultra')">احترافي 🔥</button>
+  <button id="btnFast" class="plan" onclick="setP('fast')">سريع ⚡</button>
+  <button id="btnSmooth" class="plan" onclick="setP('smooth')">محسّن ✨</button>
+  <button id="btnUltra" class="plan" onclick="setP('ultra')">احترافي 🔥</button>
 </div>
 
 <p id="desc"></p>
 
-<input type="file" id="file">
+<input type="file" id="file" accept="video/*" style="width:100%;padding:12px;margin-top:15px;border-radius:12px">
+
 <button class="start" onclick="send()">بدء المعالجة</button>
 <p id="msg"></p>
 </div>
 
 <script>
 let plan="fast";
+const descEl=document.getElementById("desc");
+
 function setP(p){
-plan=p;
-["f","s","u"].forEach(i=>document.getElementById(i).classList.remove("active"));
-document.getElementById(p[0]).classList.add("active");
-document.getElementById("desc").textContent =
- p=="fast"?"سريع ⚡: أقل معالجة وأسرع وقت":
- p=="smooth"?"محسّن ✨: جودة أفضل وسلاسة أنعم":
- "احترافي 🔥: أعلى جودة — وقت أطول";
+  plan=p;
+  document.getElementById("btnFast").classList.remove("active");
+  document.getElementById("btnSmooth").classList.remove("active");
+  document.getElementById("btnUltra").classList.remove("active");
+
+  if(p==="fast"){
+    document.getElementById("btnFast").classList.add("active");
+    descEl.textContent="سريع ⚡: أقل معالجة وأسرع وقت — مناسب إذا تبي الفيديو يطلع بسرعة.";
+  }
+  if(p==="smooth"){
+    document.getElementById("btnSmooth").classList.add("active");
+    descEl.textContent="محسّن ✨: سلاسة أوضح وتحسين بسيط للجودة — خيار ممتاز لتيك توك.";
+  }
+  if(p==="ultra"){
+    document.getElementById("btnUltra").classList.add("active");
+    descEl.textContent="احترافي 🔥: أعلى جودة ممكنة (تنعيم + وضوح + سلاسة قوية) — يأخذ وقت أطول.";
+  }
 }
 setP("fast");
 
 async function send(){
-const f=document.getElementById("file").files[0];
-const k=localStorage.getItem("KEY");
-const d=localStorage.getItem("DEVICE");
-if(!f||!k||!d)return;
-const fd=new FormData();
-fd.append("file",f); fd.append("plan",plan);
-const r=await fetch("/process",{method:"POST",headers:{"X-KEY":k,"X-DEVICE":d},body:fd});
-if(!r.ok){msg.textContent="فشل";return;}
-const b=await r.blob(); const a=document.createElement("a");
-a.href=URL.createObjectURL(b); a.download="output.mp4"; a.click();
+  const msg=document.getElementById("msg");
+  const file=document.getElementById("file").files[0];
+  const key=localStorage.getItem("KEY");
+  const device=localStorage.getItem("DEVICE");
+
+  if(!file){msg.textContent="اختار فيديو أولاً";return;}
+  if(!key||!device){msg.textContent="لازم تسجل دخول";location.href="/login.html";return;}
+
+  msg.textContent="جاري المعالجة...";
+
+  const fd=new FormData();
+  fd.append("file",file);
+  fd.append("plan",plan);
+
+  const r=await fetch("/process",{method:"POST",headers:{"X-KEY":key,"X-DEVICE":device},body:fd});
+
+  if(!r.ok){
+    let next="";
+    try{const e=await r.json(); if(e.next_plan) next=" — جرّب: "+e.next_plan;}catch(_){}
+    msg.textContent="فشلت المعالجة"+next;
+    return;
+  }
+
+  const b=await r.blob();
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(b);
+  a.download="output.mp4";
+  a.click();
+  msg.textContent="تمت المعالجة ✅";
 }
 </script>
 </body>
