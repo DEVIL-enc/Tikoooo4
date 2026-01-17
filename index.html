@@ -1,93 +1,457 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<title>RESIST TIK</title>
-<style>
-body{margin:0;background:#081a2b;color:#fff;font-family:system-ui}
-.box{max-width:600px;margin:40px auto;background:#0b2a44;padding:20px;border-radius:20px}
-.plans{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.plan{padding:12px 16px;border-radius:14px;border:none;background:#123e63;color:#fff;font-weight:bold;cursor:pointer}
-.plan.active{outline:2px solid #00d4ff}
-#desc{margin-top:10px;font-size:13px;opacity:.85;text-align:center;line-height:1.6}
-button.start{width:100%;margin-top:15px;padding:14px;border-radius:14px;border:none;background:#00d4ff;color:#001;font-weight:900;cursor:pointer}
-#msg{margin-top:10px;text-align:center;font-size:13px}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0f1320">
+  <title>RESIST TIK</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root{ --bg:#0a0b12; --ink:#f3f6fb; --muted:#aab6c5; --line:#1d2433; --c1:#25F4EE; --c2:#FE2C55; }
+    *{ box-sizing: border-box; font-family: 'Tajawal', 'Cairo', sans-serif; }
+    body{
+      margin:0; color:var(--ink); background:var(--bg); font-size:16px;
+      background-image:
+        radial-gradient(ellipse 50vw 30vh at 15% -10%, rgba(37,244,238,.12), transparent 80%),
+        radial-gradient(ellipse 60vw 40vh at 110% -20%, rgba(254,44,85,.12), transparent 80%),
+        linear-gradient(180deg, #080910 0%, #0a0b12 100%);
+    }
+    body.login-active { overflow: hidden; }
+
+    /* ===== Desktop block (موبايل فقط) ===== */
+    .desktop-block{
+      display:none; position:fixed; inset:0; background:#0a0b12; z-index:99999;
+      padding:24px; text-align:center; align-items:center; justify-content:center;
+    }
+    .desktop-box{
+      max-width:420px; width:100%;
+      background: rgba(15, 19, 32, 0.9);
+      border: 1px solid #1d2433;
+      border-radius:18px;
+      padding:22px;
+      box-shadow:0 20px 60px rgba(0,0,0,.35);
+    }
+    .desktop-box h2{
+      margin:0 0 8px 0; font-weight:900;
+      background: linear-gradient(90deg, #FE2C55, #25F4EE, #FE2C55);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .desktop-box p{ margin:0; color:#aab6c5; line-height:1.8; }
+
+    .topbar{
+      position:sticky; top:0; width:100%;
+      display:flex; justify-content:center; align-items:center;
+      padding:14px 16px;
+      backdrop-filter: saturate(140%) blur(8px);
+      background: linear-gradient(180deg, rgba(10,11,18,.75), rgba(10,11,18,0));
+      z-index:10;
+    }
+    .brand{
+      font-weight:900; font-size:42px; letter-spacing:.6px; margin:0;
+      background: linear-gradient(90deg, var(--c2), var(--c1), var(--c2));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow: 0 0 18px rgba(37,244,238,.35), 0 0 18px rgba(254,44,85,.25);
+      background-size: 200% auto; animation: shine 3s linear infinite;
+    }
+    @keyframes shine { to { background-position:-200% center; } }
+
+    .wrap{ width: min(520px, 94vw); padding: 20px 0 100px; margin: 0 auto; }
+    .card{
+      background: rgba(15, 19, 32, 0.8);
+      border: 1px solid var(--line);
+      border-radius:18px;
+      padding: 24px;
+      box-shadow:0 20px 60px rgba(0,0,0,.35);
+      margin-bottom:16px;
+    }
+
+    .upload{
+      border-radius:16px; padding:28px; text-align:center; cursor:pointer;
+      background:rgba(255,255,255,.02); border:2px dashed #314055;
+    }
+    .u-title{
+      display:inline-block; font-weight:800; font-size:22px;
+      background: linear-gradient(90deg,var(--c1),var(--c2));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .hint{ margin-top:6px; color:var(--muted); font-size:14px; }
+
+    .controls-wrap{ display:flex; flex-direction:column; align-items:center; gap:12px; margin-top:20px; }
+
+    .plan-grid{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:4px}
+    .plan-btn{
+      border:1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink);
+      padding:10px 14px; border-radius:14px; font-weight:800; cursor:pointer;
+      transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+      font-size:14px; min-width: 110px;
+    }
+    .plan-btn.active{
+      border-color: rgba(37,244,238,.6);
+      box-shadow: 0 0 0 2px rgba(37,244,238,.15);
+      background: rgba(37,244,238,.08);
+    }
+    .plan-desc{margin-top:10px;color:var(--muted);font-size:13px;text-align:center;line-height:1.6}
+
+    .btn{
+      width: 14rem; height: 3.5rem; border-radius: 5rem; cursor:pointer;
+      border: double 4px transparent;
+      background-image:
+        linear-gradient(#212121, #212121),
+        linear-gradient(137.48deg, #ffdb3b 10%, #fe53bb 45%, #8f51ea 67%, #0044ff 87%);
+      background-origin: border-box; background-clip: content-box, border-box;
+      display:flex; justify-content:center; align-items:center;
+    }
+    .btn strong{color:#fff; letter-spacing:2px; font-weight:900;}
+
+    .bar-wrap{ height:14px; background:#0a0f1a; border:1px solid var(--line); border-radius:999px; overflow:hidden; width: 100%; }
+    .bar{ height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,var(--c2),var(--c1)); transition:width .12s; }
+    .bar.running{
+      width: 100%;
+      background: linear-gradient(90deg, var(--c2), var(--c1), var(--c2));
+      background-size: 200% auto;
+      animation: shine 2s linear infinite;
+    }
+    .status{ font-size:14px; color:var(--muted); height: 22px; }
+
+    .footer{
+      position:fixed; bottom:0; left:0; right:0; text-align:center;
+      font-size:15px; font-weight:700; color:var(--ink);
+      padding: 10px 0; background: var(--bg); border-top:1px solid var(--line); z-index:20;
+    }
+
+    ul.guide{ padding:0 20px 0 0; margin:0; line-height:1.8; font-size: 15px; }
+
+    /* Login overlay */
+    .login-overlay { position: fixed; inset:0; background-color: rgba(10, 11, 18, 0.9);
+      display: flex; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(5px); }
+    .login-overlay .login-card { background-image: linear-gradient(163deg, #00ff75 0%, #3700ff 100%); border-radius: 22px; max-width: 350px; width: 90%; }
+    .login-overlay .card2 { background-color: #171717; border-radius: 20px; }
+    .login-overlay .form { display:flex; flex-direction:column; gap:10px; padding: 1.5em 2em; }
+    .login-overlay #heading { text-align:center; margin: 0.5em 0 1.5em; color:#fff; font-size: 1.2em; }
+    .login-overlay .field { display:flex; align-items:center; gap:.5em; border-radius:25px; padding:.6em; background:#171717; box-shadow: inset 2px 5px 10px rgb(5, 5, 5); }
+    .login-overlay .input-field { background:none; border:none; outline:none; width:100%; color:#d3d3d3; text-align:right; }
+    .login-overlay .login-button { padding:.8em; width:100%; border-radius:8px; border:none; background:#252525; color:#fff; font-weight:900; cursor:pointer; }
+    .login-overlay .login-button:disabled{background:#555; cursor:not-allowed;}
+    .login-feedback { text-align:center; font-size:14px; height: 20px; margin-top: 10px; color: var(--c1); }
+
+    /* Toast */
+    #toast{
+      visibility:hidden; min-width:240px; max-width:95vw;
+      background: linear-gradient(90deg, #25F4EE, #FE2C55, #25F4EE);
+      color:#fff; text-align:center; border-radius:10px; padding:15px 18px;
+      position:fixed; z-index:9999; left:50%; transform:translateX(-50%);
+      bottom:40px; font-size:18px; box-shadow:0 4px 18px rgba(0,0,0,.18);
+      opacity:0; transition: opacity .5s, bottom .5s; direction: rtl;
+    }
+  </style>
 </head>
+
 <body>
-<div class="box">
-<h2 style="text-align:center;margin-top:0">معالجة فيديو تيك توك</h2>
+  <!-- Desktop Block -->
+  <div id="desktopBlock" class="desktop-block">
+    <div class="desktop-box">
+      <h2>RESIST TIK</h2>
+      <p>الموقع هذا مخصص للموبايل فقط 📱<br>افتحه من هاتفك باش يشتغل.</p>
+    </div>
+  </div>
 
-<div class="plans">
-  <button id="btnFast" class="plan" onclick="setP('fast')">سريع ⚡</button>
-  <button id="btnSmooth" class="plan" onclick="setP('smooth')">محسّن ✨</button>
-  <button id="btnUltra" class="plan" onclick="setP('ultra')">احترافي 🔥</button>
-</div>
+  <div id="toast"></div>
 
-<p id="desc"></p>
+  <!-- Login Overlay -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <div class="card2">
+        <form class="form" id="login-form">
+          <h1 class="brand" style="text-align:center;font-size:38px;margin:10px 0 10px;">RESIST TIK</h1>
+          <p id="heading">تسجيل الدخول</p>
+          <div class="field">
+            <input class="input-field" placeholder="اكتب مفتاح الاشتراك هنا" type="text" id="key-field" autocomplete="off" />
+          </div>
+          <button class="login-button" type="submit">دخول</button>
+          <div id="login-feedback" class="login-feedback"></div>
+        </form>
+      </div>
+    </div>
+  </div>
 
-<input type="file" id="file" accept="video/*" style="width:100%;padding:12px;margin-top:15px;border-radius:12px">
+  <!-- App -->
+  <div id="app-content" style="display:none;">
+    <div class="topbar"><h1 class="brand">RESIST TIK</h1></div>
 
-<button class="start" onclick="send()">بدء المعالجة</button>
-<p id="msg"></p>
-</div>
+    <div class="wrap">
+      <section class="card">
+        <div id="drop" class="upload">
+          <div class="u-title">رفع الفيديو</div>
+          <div class="hint" id="fileInfo">اسحب المقطع هنا أو اضغط للاختيار</div>
+          <input id="file" type="file" accept="video/*" style="display:none" />
+        </div>
 
-<script>
-let plan="fast";
-const descEl=document.getElementById("desc");
+        <div class="controls-wrap">
+          <div class="plan-grid">
+            <button type="button" class="plan-btn" id="planFast">سريع ⚡</button>
+            <button type="button" class="plan-btn" id="planSmooth">محسّن ✨</button>
+            <button type="button" class="plan-btn" id="planUltra">احترافي 🔥</button>
+          </div>
+          <div id="planDesc" class="plan-desc"></div>
 
-function setP(p){
-  plan=p;
-  document.getElementById("btnFast").classList.remove("active");
-  document.getElementById("btnSmooth").classList.remove("active");
-  document.getElementById("btnUltra").classList.remove("active");
+          <button type="button" id="process" class="btn" disabled><strong>بدء المعالجة</strong></button>
 
-  if(p==="fast"){
-    document.getElementById("btnFast").classList.add("active");
-    descEl.textContent="سريع ⚡: أقل معالجة وأسرع وقت — مناسب إذا تبي الفيديو يطلع بسرعة.";
-  }
-  if(p==="smooth"){
-    document.getElementById("btnSmooth").classList.add("active");
-    descEl.textContent="محسّن ✨: سلاسة أوضح وتحسين بسيط للجودة — خيار ممتاز لتيك توك.";
-  }
-  if(p==="ultra"){
-    document.getElementById("btnUltra").classList.add("active");
-    descEl.textContent="احترافي 🔥: أعلى جودة ممكنة (تنعيم + وضوح + سلاسة قوية) — يأخذ وقت أطول.";
-  }
-}
-setP("fast");
+          <div id="status" class="status"></div>
+          <div class="bar-wrap"><div id="bar" class="bar"></div></div>
+        </div>
+      </section>
 
-async function send(){
-  const msg=document.getElementById("msg");
-  const file=document.getElementById("file").files[0];
-  const key=localStorage.getItem("KEY");
-  const device=localStorage.getItem("DEVICE");
+      <section class="card">
+        <h3 style="margin-top:0;color:var(--c1)">ℹ️ تعليمات مهمة</h3>
+        <ul class="guide">
+          <li>الحد الأقصى لحجم ملف الفيديو: <b>200 ميقا</b>.</li>
+          <li>بعد اكتمال معالجة الفيديو وتنزيله، افتح تطبيق <b>TikTok</b> وارفع الفيديو كـ<strong>خاص</strong>.</li>
+          <li>بعد اكتمال الرفع، يمكنك تغييره من خاص إلى <strong>عام</strong>.</li>
+        </ul>
+      </section>
+    </div>
 
-  if(!file){msg.textContent="اختار فيديو أولاً";return;}
-  if(!key||!device){msg.textContent="لازم تسجل دخول";location.href="/login.html";return;}
+    <div class="footer">Made by RESIST ♥️</div>
+  </div>
 
-  msg.textContent="جاري المعالجة...";
+  <script>
+    // موبايل فقط
+    (function(){
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if(!isMobile){
+        document.getElementById("desktopBlock").style.display="flex";
+      }
+    })();
 
-  const fd=new FormData();
-  fd.append("file",file);
-  fd.append("plan",plan);
+    function showToast(message, type = "info") {
+      const toast = document.getElementById("toast");
+      let bg = "linear-gradient(90deg, #25F4EE, #FE2C55, #25F4EE)";
+      if (type === "success") bg = "linear-gradient(90deg, #36d399, #25F4EE)";
+      else if (type === "error") bg = "linear-gradient(90deg, #FE2C55, #ff4444)";
+      else if (type === "warn") bg = "linear-gradient(90deg, #fbbf24, #FE2C55)";
+      toast.style.background = bg;
+      toast.textContent = message;
+      toast.style.visibility = "visible";
+      toast.style.opacity = "1";
+      toast.style.bottom = "40px";
+      clearTimeout(window.__toastTimeout);
+      window.__toastTimeout = setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.bottom = "10px";
+        setTimeout(() => { toast.style.visibility = "hidden"; }, 500);
+      }, 2500);
+    }
 
-  const r=await fetch("/process",{method:"POST",headers:{"X-KEY":key,"X-DEVICE":device},body:fd});
+    // نفس مفاتيح التخزين في كل مكان
+    const KEY_STORE = "SUB_KEY";
+    const DEV_STORE = "DEVICE_ID";
+    const MAX_SIZE = 200 * 1024 * 1024;
 
-  if(!r.ok){
-    let next="";
-    try{const e=await r.json(); if(e.next_plan) next=" — جرّب: "+e.next_plan;}catch(_){}
-    msg.textContent="فشلت المعالجة"+next;
-    return;
-  }
+    function getDeviceName() {
+      const ua = navigator.userAgent || "";
+      const platform = navigator.platform || "";
+      return (platform + " | " + ua).slice(0, 80);
+    }
+    async function getDeviceID() {
+      let id = localStorage.getItem(DEV_STORE);
+      if (id) return id;
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      id = Array.from(bytes).map(b => b.toString(16).padStart(2,"0")).join("");
+      localStorage.setItem(DEV_STORE, id);
+      return id;
+    }
 
-  const b=await r.blob();
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(b);
-  a.download="output.mp4";
-  a.click();
-  msg.textContent="تمت المعالجة ✅";
-}
-</script>
+    const loginOverlay = document.getElementById("login-overlay");
+    const appContent = document.getElementById("app-content");
+    const loginForm = document.getElementById("login-form");
+    const keyField = document.getElementById("key-field");
+    const loginFeedback = document.getElementById("login-feedback");
+
+    const drop = document.getElementById("drop");
+    const fileInput = document.getElementById("file");
+    const fileInfo = document.getElementById("fileInfo");
+    const processBtn = document.getElementById("process");
+    const status = document.getElementById("status");
+    const bar = document.getElementById("bar");
+
+    // Plans
+    let selectedPlan = "smooth";
+    const planFast = document.getElementById("planFast");
+    const planSmooth = document.getElementById("planSmooth");
+    const planUltra = document.getElementById("planUltra");
+    const planDesc = document.getElementById("planDesc");
+
+    function setPlan(plan) {
+      selectedPlan = plan;
+      [planFast, planSmooth, planUltra].forEach(b => b.classList.remove("active"));
+      if (plan === "fast") planFast.classList.add("active");
+      if (plan === "smooth") planSmooth.classList.add("active");
+      if (plan === "ultra") planUltra.classList.add("active");
+
+      if (plan === "fast") planDesc.textContent = "⚡ أسرع وقت — أقل معالجة (مناسب للملفات الكبيرة)";
+      else if (plan === "smooth") planDesc.textContent = "✨ توازن ممتاز — سلاسة + جودة (مُوصى به)";
+      else planDesc.textContent = "🔥 أعلى جودة — أقوى معالجة (قد تأخذ وقت أطول)";
+    }
+
+    function showApp() {
+      loginOverlay.style.display = "none";
+      appContent.style.display = "block";
+      document.body.classList.remove("login-active");
+    }
+    function showLogin(message = "") {
+      localStorage.removeItem(KEY_STORE);
+      loginFeedback.style.color = "#FE2C55";
+      loginFeedback.textContent = message;
+      loginOverlay.style.display = "flex";
+      appContent.style.display = "none";
+      document.body.classList.add("login-active");
+    }
+    function mb(bytes){ return (bytes/(1024*1024)).toFixed(1)+" MB"; }
+
+    async function refreshSubscriptionInfo(isAuto=false){
+      const key = localStorage.getItem(KEY_STORE);
+      if(!key){ if(!isAuto) showLogin("الرجاء إدخال مفتاح اشتراك صالح."); return false; }
+      try{
+        const device = await getDeviceID();
+        const res = await fetch("/me", {
+          headers: { "X-KEY": key, "X-DEVICE": device, "X-DEVICE-NAME": getDeviceName() }
+        });
+        const data = await res.json().catch(()=> ({}));
+        if(!res.ok){
+          const msg = data.detail || "المفتاح غير صالح أو منتهي";
+          showLogin(msg);
+          if(!isAuto) showToast(msg,"error");
+          return false;
+        }
+        showApp();
+        return true;
+      }catch(e){
+        if(!isAuto) showToast("❌ فشل الاتصال بالخادم.","error");
+        return false;
+      }
+    }
+
+    function updateInfo(){
+      const f = fileInput.files[0];
+      status.textContent=""; bar.classList.remove("running"); bar.style.width="0%";
+      if(!f){ fileInfo.textContent="اسحب المقطع هنا أو اضغط للاختيار"; processBtn.disabled=true; return; }
+      if(f.size > MAX_SIZE){
+        processBtn.disabled=true; fileInput.value="";
+        showToast(`❌ حجم كبير (${mb(f.size)}). الحد 200MB`,"error");
+        return;
+      }
+      fileInfo.textContent = `الملف: ${f.name} — ${mb(f.size)}`;
+      processBtn.disabled=false;
+    }
+
+    drop.addEventListener("click", ()=> fileInput.click());
+    drop.addEventListener("dragover", e=> e.preventDefault());
+    drop.addEventListener("drop", e=>{
+      e.preventDefault();
+      if(e.dataTransfer.files.length){ fileInput.files = e.dataTransfer.files; updateInfo(); }
+    });
+    fileInput.addEventListener("change", updateInfo);
+
+    function planLabel(p){ return p==="fast"?"سريع":(p==="smooth"?"محسّن":"احترافي"); }
+
+    processBtn.addEventListener("click", async ()=>{
+      const f = fileInput.files[0];
+      if(!f) return;
+
+      const key = localStorage.getItem(KEY_STORE);
+      if(!key){ showLogin("انتهت الجلسة، سجل دخول."); return; }
+
+      const device = await getDeviceID();
+
+      status.textContent="جارٍ الرفع…";
+      bar.classList.remove("running"); bar.style.width="0%";
+      processBtn.disabled=true; fileInput.disabled=true;
+
+      const fd = new FormData();
+      fd.append("file", f);
+      fd.append("plan", selectedPlan);
+
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST","/process", true);
+      xhr.responseType="blob";
+      xhr.setRequestHeader("X-KEY", key);
+      xhr.setRequestHeader("X-DEVICE", device);
+      xhr.setRequestHeader("X-DEVICE-NAME", getDeviceName());
+
+      xhr.upload.onprogress = (e)=>{
+        if(e.lengthComputable) bar.style.width = Math.round((e.loaded/e.total)*100) + "%";
+      };
+
+      xhr.onprogress = ()=>{
+        status.textContent = `جارٍ تحسين الفيديو (${planLabel(selectedPlan)})…`;
+        bar.classList.add("running");
+      };
+
+      xhr.onload = async ()=>{
+        const ok = xhr.status>=200 && xhr.status<300;
+        if(!ok){
+          let msg="فشلت المعالجة"; let nextPlan=null;
+          try{
+            const txt = await xhr.response.text();
+            const data = JSON.parse(txt);
+            msg = data.message || data.detail || msg;
+            nextPlan = data.next_plan || null;
+          }catch(_){}
+          status.textContent = "❌ " + msg;
+          showToast("❌ "+msg,"error");
+          if(nextPlan) setTimeout(()=> showToast(`جرّب خطة: ${planLabel(nextPlan)} (اختيار يدوي)`,"warn"), 600);
+          cleanupUI(); return;
+        }
+
+        status.textContent="✅ اكتملت المعالجة — جارٍ التنزيل…";
+        bar.classList.add("running");
+
+        const blob = xhr.response;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href=url; a.download=`4tik_${Date.now()}_${f.name||"output.mp4"}`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(()=> URL.revokeObjectURL(url), 2000);
+
+        showToast("✅ تم تنزيل الفيديو!","success");
+        cleanupUI(true);
+      };
+
+      xhr.onerror = ()=>{
+        status.textContent="❌ فشل الاتصال بالخادم.";
+        showToast("❌ فشل الاتصال بالخادم.","error");
+        cleanupUI();
+      };
+
+      xhr.send(fd);
+    });
+
+    function cleanupUI(clear=false){
+      processBtn.disabled=false; fileInput.disabled=false;
+      if(clear){ fileInput.value=""; updateInfo(); }
+    }
+
+    loginForm.addEventListener("submit", async (e)=>{
+      e.preventDefault();
+      const userKey = keyField.value.trim();
+      if(!userKey){ loginFeedback.textContent="الرجاء إدخال مفتاح."; showToast("اكتب المفتاح","warn"); return; }
+      loginFeedback.style.color="var(--c1)";
+      loginFeedback.textContent="جار التحقق...";
+      localStorage.setItem(KEY_STORE, userKey);
+      await refreshSubscriptionInfo(false);
+    });
+
+    planFast.addEventListener("click", ()=> setPlan("fast"));
+    planSmooth.addEventListener("click", ()=> setPlan("smooth"));
+    planUltra.addEventListener("click", ()=> setPlan("ultra"));
+    setPlan("smooth");
+
+    (async ()=>{
+      document.body.classList.add("login-active");
+      updateInfo();
+      await refreshSubscriptionInfo(true);
+    })();
+  </script>
 </body>
 </html>
