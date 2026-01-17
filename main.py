@@ -247,6 +247,9 @@ async def process_video(request: Request, file: UploadFile = File(...), plan: st
     row["last_used"] = now_iso()
     save_db(db)
 
+    tmp_in_path = None
+    tmp_out_path = None
+
     try:
         suffix = Path(file.filename).suffix
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_in:
@@ -270,3 +273,16 @@ async def process_video(request: Request, file: UploadFile = File(...), plan: st
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"حدث خطأ غير متوقع: {str(e)}")
+
+    finally:
+        try:
+            if tmp_in_path and os.path.exists(tmp_in_path):
+                os.remove(tmp_in_path)
+        except:
+            pass
+
+        try:
+            if tmp_out_path and os.path.exists(tmp_out_path):
+                os.remove(tmp_out_path)
+        except:
+            pass
