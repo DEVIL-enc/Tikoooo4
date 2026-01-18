@@ -294,8 +294,3 @@ async def process_video(request: Request, file: UploadFile = File(...), plan: st
             os.remove(tmp_in_path)
     except:
         pass
-    try:
-        if tmp_out_path and os.path.exists(tmp_out_path):
-            os.remove(tmp_out_path)
-    except:
-        pass
