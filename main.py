@@ -289,8 +289,14 @@ async def process_video(request: Request, file: UploadFile = File(...), plan: st
         raise HTTPException(status_code=500, detail=f"حدث خطأ غير متوقع: {str(e)}")
 
     finally:
-    try:
-        if tmp_in_path and os.path.exists(tmp_in_path):
-            os.remove(tmp_in_path)
-    except:
-        pass
+        try:
+            if tmp_in_path and os.path.exists(tmp_in_path):
+                os.remove(tmp_in_path)
+        except:
+            pass
+
+        try:
+            if tmp_out_path and os.path.exists(tmp_out_path):
+                os.remove(tmp_out_path)
+        except:
+            pass
