@@ -7,9 +7,12 @@ import tempfile
 import threading
 import requests
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Header, Depends
+
+from fastapi import (
+    FastAPI, HTTPException, UploadFile, File, Form, Request, Header, Depends, BackgroundTasks
+)
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 # ============================
 # إعدادات JSONBin والمفتاح السري للمشرف
@@ -39,7 +42,7 @@ def load_db():
             if r.status_code == 404:
                 return {"codes": []}
             r.raise_for_status()
-            data = r.json().get("record", {"codes":[]})
+            data = r.json().get("record", {"codes": []})
             if "codes" not in data:
                 data["codes"] = []
             return data
@@ -48,7 +51,7 @@ def load_db():
 
 def save_db(data):
     with DB_LOCK:
-        payload = json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')
+        payload = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
         r = _jsonbin_session.put(JSONBIN_BASE, data=payload)
         r.raise_for_status()
 
@@ -79,7 +82,8 @@ def ensure_bound_or_bind(db, row, device: str, device_name: str | None):
     if not row.get("device_hash"):
         row["device_hash"] = dev_hash
         row["device_name"] = device_name
-        if not row.get("activated_on"): row["activated_on"] = now_iso()
+        if not row.get("activated_on"):
+            row["activated_on"] = now_iso()
         save_db(db)
         return True
     return row["device_hash"] == dev_hash
@@ -87,48 +91,61 @@ def ensure_bound_or_bind(db, row, device: str, device_name: str | None):
 # ============================
 # إعداد التطبيق (App Setup)
 # ============================
-app = FastAPI(title="4TIK PRO Service API")
+app = FastAPI(title="RESIST TIK Service API")
 BASE_DIR = Path(__file__).resolve().parent
 
 # ============================
-# خطط المعالجة (Processing Plans)  ✅ (الإضافة)
+# خطط المعالجة (Processing Plans)
 # ============================
 FFMPEG_PLANS = {
-    # سريع (كما هو عندك)
-    "fast": ["ffmpeg", "-itsscale", "2", "-i", "{input}", "-c:v", "copy", "-c:a", "copy", "{output}"],
-
-    # محسّن ✨ (سلاسة + تحسين بسيط للجودة)
-    "smooth": [
-    "ffmpeg","-y",
+    # سريع (سلاسة تيك توك)
+    "fast": [
+        "ffmpeg",
     "-itsscale","2",
     "-i","{input}",
-    "-vf",
-    "scale=1920:1080,"
-    "fps=30,"
-    "tmix=frames=2,"
-    "unsharp=5:5:0.85:3:3:0.4,"
-    "format=yuv420p",
-    "-c:v","libx264","-crf","21","-preset","veryfast",
-    "-x264-params","keyint=60:min-keyint=60:scenecut=0",
-    "-c:a","aac","-b:a","192k",
-    "-movflags","+faststart",
+    "-c:v","copy",
+    "-c:a","copy",
     "{output}"
     ],
 
-    # احترافي 🔥 (أعلى جودة — وقت أطول)
-    "ultra": [
-    "ffmpeg","-y",
-    "-itsscale","2",
-    "-i","{input}",
-    "-vf","scale=1920:1080:flags=lanczos,hqdn3d=1.2:1.2:6:6,unsharp=5:5:0.9:3:3:0.5,eq=contrast=1.18:brightness=0.04:saturation=1.25,fps=60,tmix=frames=4:weights='1 1 1 1',format=yuv420p",
-    "-c:v","libx264","-crf","20","-preset","veryfast",
-    "-x264-params","keyint=120:min-keyint=120:scenecut=0",
-    "-c:a","aac","-b:a","192k",
-    "-movflags","+faststart",
-    "{output}"
-    ]
-}
+    # محسّن ✨ (خفيف + موشن بلور بسيط + حدّة خفيفة)
+    "smooth": [
+        "ffmpeg","-y",
+        "-itsscale","2",
+        "-i","{input}",
+        "-vf",
+        "scale=1920:1920:1080,"
+        "fps=30,"
+        "tmix=frames=2,"
+        "unsharp=5:5:0.85:3:3:0.35,"
+        "format=yuv420p",
+        "-c:v","libx264","-crf","21","-preset","veryfast",
+        "-x264-params","keyint=60:min-keyint=60:scenecut=0",
+        "-c:a","aac","-b:a","192k",
+        "-movflags","+faststart",
+        "{output}"
+    ],
 
+    # احترافي 🔥 (أقوى + 60fps + بدون weights باش ما يفشل)
+    "ultra": [
+        "ffmpeg","-y",
+        "-itsscale","2",
+        "-i","{input}",
+        "-vf",
+        "scale=1920:1080:flags=lanczos,"
+        "hqdn3d=1.2:1.2:6:6,"
+        "unsharp=5:5:0.9:3:3:0.5,"
+        "eq=contrast=1.18:brightness=0.04:saturation=1.25,"
+        "fps=60,"
+        "tmix=frames=4,"
+        "format=yuv420p",
+        "-c:v","libx264","-crf","20","-preset","veryfast",
+        "-x264-params","keyint=120:min-keyint=120:scenecut=0",
+        "-c:a","aac","-b:a","192k",
+        "-movflags","+faststart",
+        "{output}"
+    ],
+}
 
 app.add_middleware(
     CORSMiddleware,
@@ -148,7 +165,7 @@ async def verify_content_length(content_length: int = Header(...)):
         raise HTTPException(status_code=413, detail="الملف أكبر من 250MB")
 
 # ============================
-# صفحات (لخمس ملفات فقط)
+# صفحات
 # ============================
 @app.get("/", include_in_schema=False)
 async def home():
@@ -163,7 +180,7 @@ async def index_page():
     return FileResponse(str(BASE_DIR / "index.html"))
 
 # ============================
-# إضافة اشتراك من المتصفح (كما هو)
+# إضافة اشتراك من المتصفح
 # ============================
 @app.get("/subscribe", summary="إضافة اشتراك من المتصفح مباشرة")
 async def add_subscription(key: str, duration_days: int = 30, admin_key: str = ""):
@@ -171,7 +188,6 @@ async def add_subscription(key: str, duration_days: int = 30, admin_key: str = "
         raise HTTPException(status_code=403, detail="مفتاح المشرف غير صحيح")
 
     db = load_db()
-
     if find_key(db, key):
         return JSONResponse(
             content={"message": f"المفتاح '{key}' موجود مسبقًا."},
@@ -192,7 +208,7 @@ async def add_subscription(key: str, duration_days: int = 30, admin_key: str = "
     return {"message": f"تم إضافة المفتاح '{key}' بنجاح ✅", "duration_days": duration_days}
 
 # ============================
-# معلومات الاشتراك الحالية (كما هو)
+# معلومات الاشتراك الحالية
 # ============================
 @app.get("/me", summary="الحصول على معلومات الاشتراك الحالية")
 async def me(request: Request):
@@ -230,10 +246,15 @@ async def me(request: Request):
     }
 
 # ============================
-# معالجة الفيديو (تمت إضافة plan فقط ✅)
+# معالجة الفيديو (Plan + حل المساحة + /tmp)
 # ============================
 @app.post("/process", summary="معالجة الفيديو للمستخدمين المشتركين", dependencies=[Depends(verify_content_length)])
-async def process_video(request: Request, file: UploadFile = File(...), plan: str = Form("fast")):
+async def process_video(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    plan: str = Form("fast")
+):
     key = request.headers.get("X-KEY")
     device = request.headers.get("X-DEVICE")
     if not key or not device:
@@ -260,7 +281,8 @@ async def process_video(request: Request, file: UploadFile = File(...), plan: st
     try:
         suffix = Path(file.filename or "video.mp4").suffix or ".mp4"
 
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_in:
+        # خزن في /tmp (مهم ل Render)
+        with tempfile.NamedTemporaryFile(delete=False, dir="/tmp", suffix=suffix) as tmp_in:
             tmp_in_path = tmp_in.name
 
         # كتابة الفيديو قطعة قطعة بدون RAM
@@ -276,27 +298,36 @@ async def process_video(request: Request, file: UploadFile = File(...), plan: st
         if plan not in FFMPEG_PLANS:
             plan = "fast"
 
-        cmd = [c.format(input=tmp_in_path, output=tmp_out_path) for c in FFMPEG_PLANS[plan]]
+        # replace بدل format (آمن مع الفلاتر)
+        cmd = [
+            x.replace("{input}", tmp_in_path).replace("{output}", tmp_out_path)
+            for x in FFMPEG_PLANS[plan]
+        ]
+
         subprocess.run(cmd, check=True, capture_output=True, text=True, encoding="utf-8")
 
-        return FileResponse(tmp_out_path, filename=f"RESIST_{file.filename}")
+        # مهم: احذف output بعد الإرسال (يحل مشكلة المساحة)
+        background_tasks.add_task(os.remove, tmp_out_path)
 
-    except subprocess.CalledProcessError:
+        return FileResponse(tmp_out_path, filename=f"RESIST_{file.filename or 'video.mp4'}")
+
+    except subprocess.CalledProcessError as e:
         next_plan = "smooth" if plan == "fast" else ("ultra" if plan == "smooth" else None)
-        return JSONResponse(status_code=400, content={"status": "failed", "message": "فشلت المعالجة", "next_plan": next_plan})
+        err = (e.stderr or e.stdout or "")[-1200:]
+        return JSONResponse(status_code=400, content={
+            "status": "failed",
+            "message": "فشلت المعالجة",
+            "next_plan": next_plan,
+            "ffmpeg_error": err
+        })
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"حدث خطأ غير متوقع: {str(e)}")
 
     finally:
+        # احذف input فقط هنا
         try:
             if tmp_in_path and os.path.exists(tmp_in_path):
                 os.remove(tmp_in_path)
-        except:
-            pass
-
-        try:
-            if tmp_out_path and os.path.exists(tmp_out_path):
-                os.remove(tmp_out_path)
         except:
             pass
